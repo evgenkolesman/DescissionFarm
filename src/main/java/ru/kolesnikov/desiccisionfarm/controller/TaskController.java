@@ -25,8 +25,9 @@ public class TaskController {
     public Task addTask(@RequestBody TaskDTO task,
                         @PathVariable String login) {
 
-       return taskService.addTask(new Task(task.name(),
+        return taskService.addTask(new Task(task.name(),
                 task.description(),
+                Statuses.RENDERING.name(),
                 userService.findByLogin(login)));
 
     }

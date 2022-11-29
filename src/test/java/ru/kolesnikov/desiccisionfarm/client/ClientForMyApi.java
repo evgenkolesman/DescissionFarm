@@ -3,6 +3,7 @@ package ru.kolesnikov.desiccisionfarm.client;
 import io.restassured.RestAssured;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.MediaType;
@@ -11,6 +12,7 @@ import ru.kolesnikov.desiccisionfarm.controller.dto.TaskResponseDTO;
 import ru.kolesnikov.desiccisionfarm.controller.dto.UserDTO;
 import ru.kolesnikov.desiccisionfarm.enums.Statuses;
 import ru.kolesnikov.desiccisionfarm.model.Task;
+import ru.kolesnikov.desiccisionfarm.repository.UserRepository;
 
 import java.util.List;
 
@@ -23,20 +25,28 @@ public class ClientForMyApi {
 
     private static final String HTTP_LOCALHOST = "http://localhost";
     private static final String ADD_USER_ENDPOINT = "/api/v1/user";
-    private static final String DELETE_USER_ENDPOINT = "/api/v1/user/{login}";
+    private static final String DELETE_USER_ENDPOINT = "/api/v1/user/%s";
     private static final String ADD_TASK_ENDPOINT = "/api/v1/user/%s/task";
     private static final String COMPLETE_TASK_ENDPOINT = "/api/v1/user/%s/task/%s/complete";
-    private static final String CREATED_LOGIN_TASK_ENDPOINT = "/api/v1/user/{login}/task/created";
-    private static final String CREATED_ALL_TASK_ENDPOINT = "/api/v1/user/{login}/allCreated";
-    private static final String HISTORY_TASK_ENDPOINT = "/api/v1/user/{login}/task/{taskId}/history";
+    private static final String CREATED_LOGIN_TASK_ENDPOINT = "/api/v1/user/%s/task/created";
+    private static final String CREATED_ALL_TASK_ENDPOINT = "/api/v1/user/%s/allCreated";
+    private static final String HISTORY_TASK_ENDPOINT = "/api/v1/user/%s/task/%s/history";
     @LocalServerPort
     public int port;
+
+    @Autowired
+    private UserRepository userRepository;
 
 
     @BeforeEach
     void init() {
         RestAssured.port = port;
 
+    }
+
+    @BeforeEach
+    void clear() {
+        userRepository.deleteAll();
     }
 
     public UriComponentsBuilder builder() {
@@ -108,7 +118,6 @@ public class ClientForMyApi {
 
         var listLoginTasks = given()
                 .contentType(MediaType.APPLICATION_JSON_VALUE)
-                .body(new UserDTO(login, name, password))
                 .when()
                 .get(builder()
                         .replacePath(String.format(CREATED_LOGIN_TASK_ENDPOINT, login))
@@ -122,14 +131,12 @@ public class ClientForMyApi {
                 .jsonPath()
                 .getList("", TaskResponseDTO.class);
         assertThat(listLoginTasks)
-                .isEqualTo(List.of(new TaskResponseDTO(task.getId(), task.getStatus()),
-                        new TaskResponseDTO(task.getId(), Statuses.COMPLETE.name())));
+                .isEqualTo(List.of(new TaskResponseDTO(task.getId(), task.getStatus())));
 
         // take info about tasks of all users
 
         var listAllTasks = given()
                 .contentType(MediaType.APPLICATION_JSON_VALUE)
-                .body(new UserDTO(login, name, password))
                 .when()
                 .get(builder()
                         .replacePath(String.format(CREATED_ALL_TASK_ENDPOINT, login))
@@ -143,14 +150,12 @@ public class ClientForMyApi {
                 .jsonPath()
                 .getList("", TaskResponseDTO.class);
         assertThat(listAllTasks)
-                .isEqualTo(List.of(new TaskResponseDTO(task.getId(), task.getStatus()),
-                        new TaskResponseDTO(task.getId(), Statuses.COMPLETE.name())));
+                .isEqualTo(List.of(new TaskResponseDTO(task.getId(), task.getStatus())));
 
         // take task`s history
 
         var listHistory = given()
                 .contentType(MediaType.APPLICATION_JSON_VALUE)
-                .body(new UserDTO(login, name, password))
                 .when()
                 .get(builder()
                         .replacePath(String.format(HISTORY_TASK_ENDPOINT, login, task.getId()))
@@ -168,7 +173,6 @@ public class ClientForMyApi {
 
         given()
                 .contentType(MediaType.APPLICATION_JSON_VALUE)
-                .body(new UserDTO(login, name, password))
                 .when()
                 .delete(builder()
                         .replacePath(String.format(DELETE_USER_ENDPOINT, login))

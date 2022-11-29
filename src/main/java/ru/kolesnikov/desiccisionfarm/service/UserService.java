@@ -31,7 +31,7 @@ public class UserService {
     }
 
     public void deleteUser(String login) {
-        userRepository.deleteById(login);
+        userRepository.deleteByLogin(login);
     }
 
     public User findByLogin(@NonNull String login) {
